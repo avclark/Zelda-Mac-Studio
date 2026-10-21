@@ -33,6 +33,10 @@ final class PortableTests: XCTestCase {
         try FileManager.default.removeItem(at: marker)
         XCTAssertThrowsError(try b.pull(from: publication)); XCTAssertTrue(b.state.environments.isEmpty)
         try markerData.write(to: marker)
+        let conflict = publication.appendingPathComponent("manifest (conflicted copy).json")
+        try Data("conflict".utf8).write(to: conflict)
+        XCTAssertThrowsError(try b.pull(from: publication))
+        try FileManager.default.removeItem(at: conflict)
         b.beforeCommit = { throw StudioError.invalid("Injected interrupted import") }
         XCTAssertThrowsError(try b.pull(from: publication)); XCTAssertTrue(try LibraryStore(root: b.root).state.environments.isEmpty)
         b.beforeCommit = nil

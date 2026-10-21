@@ -13,7 +13,7 @@ public final class LibraryStore {
     private var catalog: URL { root.appendingPathComponent("catalog.json") }
 
     public init(root: URL, isRuntimeActive: @escaping (UUID) -> Bool = { _ in false }) throws {
-        self.root = root.standardizedFileURL
+        self.root = root.resolvingSymlinksInPath()
         self.isRuntimeActive = isRuntimeActive
         if SafeFiles.fm.fileExists(atPath: root.path) {
             let values = try root.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey])
@@ -26,7 +26,10 @@ public final class LibraryStore {
         guard lockFD >= 0 else { throw StudioError.invalid("Cannot lock workspace.") }
         try locked {
             try Data("Zelda Mac Studio workspace v1".utf8).write(to: root.appendingPathComponent(".zelda-studio"), options: .atomic)
-            for folder in ["revisions", "packages", "staging"] { try SafeFiles.directory(root.appendingPathComponent(folder)) }
+            for folder in ["revisions", "packages", "staging"] {
+                try assertOwnedPath(self.root.appendingPathComponent(folder))
+                try SafeFiles.directory(self.root.appendingPathComponent(folder))
+            }
             if SafeFiles.fm.fileExists(atPath: catalog.path) { try reload() }
             else { try SafeFiles.atomicWrite(SafeFiles.encode(state), to: catalog) }
         }
@@ -38,11 +41,27 @@ public final class LibraryStore {
         defer { flock(lockFD, LOCK_UN) }
         return try body()
     }
+    internal func assertOwnedPath(_ url: URL) throws {
+        let base = root.path + "/"
+        guard url.path.hasPrefix(base) else { throw StudioError.invalid("Path is outside the managed workspace.") }
+        var cursor = root
+        for component in url.path.dropFirst(base.count).split(separator: "/") {
+            cursor.appendPathComponent(String(component))
+            var info = stat()
+            if lstat(cursor.path, &info) == 0 {
+                guard (info.st_mode & S_IFMT) != S_IFLNK else { throw StudioError.invalid("Managed workspace contains a symbolic link. No changes were made.") }
+            } else if errno != ENOENT { throw StudioError.invalid("Managed workspace path is inaccessible.") }
+        }
+    }
     public func refresh() throws { try locked { try reload() } }
     internal func reload() throws {
+        for path in [".zelda-studio", ".lock", "catalog.json", "revisions", "packages", "staging"] { try assertOwnedPath(root.appendingPathComponent(path)) }
+        guard (try catalog.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16_777_216 else { throw StudioError.invalid("Workspace catalog exceeds the supported size limit.") }
         let loaded = try SafeFiles.decode(LibraryState.self, Data(contentsOf: catalog))
         guard loaded.schema == 1 else { throw StudioError.invalid("Unsupported workspace schema. Open it with the version that created it.") }
         try Self.validate(loaded)
+        for env in loaded.environments + loaded.snapshots.map(\.environment) { try assertOwnedPath(revisionURL(env)); try assertOwnedPath(savesURL(env)); try assertOwnedPath(overlayURL(env)) }
+        for mod in loaded.mods { try assertOwnedPath(packageURL(mod.id)) }
         state = loaded
     }
     internal static func validate(_ state: LibraryState) throws {
@@ -66,7 +85,9 @@ public final class LibraryStore {
         try Self.validate(next)
         var logged = next; logged.events = Array((logged.events + ["\(ISO8601DateFormatter().string(from: Date())) — \(event)"]).suffix(100))
         try beforeCommit?()
-        try SafeFiles.atomicWrite(SafeFiles.encode(logged), to: catalog)
+        let encoded = try SafeFiles.encode(logged)
+        guard encoded.count <= 16_777_216 else { throw StudioError.invalid("Workspace catalog is full. Start a separate workspace; existing state is retained.") }
+        try SafeFiles.atomicWrite(encoded, to: catalog)
         state = logged
     }
     public func revisionURL(_ env: Adventure) -> URL { root.appendingPathComponent("revisions/\(env.id.uuidString)/\(env.revision.uuidString)") }
@@ -87,6 +108,7 @@ public final class LibraryStore {
     }
     internal func stageRevision(from old: Adventure?, to env: Adventure) throws {
         let dest = revisionURL(env)
+        try assertOwnedPath(dest)
         guard !SafeFiles.fm.fileExists(atPath: dest.path) else { throw StudioError.invalid("Revision already exists.") }
         if let old { try SafeFiles.copyTree(revisionURL(old), dest) }
         else { try SafeFiles.directory(dest) }
@@ -165,9 +187,33 @@ public final class LibraryStore {
             var next = state; replace(env, in: &next); try commit(next, event: "Managed save revision recorded.")
         }
     }
+    /// User-selected source is read-only; replacement occurs only in a new managed revision.
+    public func importManagedSaves(_ id: UUID, from source: URL) throws {
+        try locked {
+            try reload(); let old = try writable(id)
+            let manifest = try SafeFiles.regularFiles(source)
+            guard !manifest.isEmpty else { throw StudioError.invalid("Selected save folder is empty.") }
+            for path in manifest.keys {
+                let ext = (path as NSString).pathExtension.lowercased()
+                guard !["nsp", "xci", "nsz", "nca", "keys", "key", "pem"].contains(ext) else { throw StudioError.invalid("Game images or secret key files cannot be copied as saves.") }
+            }
+            var env = old; env.revision = UUID(); env.gameplayVerified = false
+            try stageRevision(from: old, to: env)
+            try SafeFiles.fm.removeItem(at: savesURL(env))
+            try SafeFiles.copyTree(source, savesURL(env)); try SafeFiles.verify(savesURL(env), manifest)
+            var next = state; next.snapshots.append(try snapshotRecord(old, label: "Before save import")); replace(env, in: &next)
+            try commit(next, event: "Selected save folder copied and verified into an independent managed revision. Original source unchanged; runtime compatibility unverified.")
+        }
+    }
     public func compare(_ a: Adventure, _ b: Adventure) throws -> String {
         let lhs = try SafeFiles.regularFiles(revisionURL(a)), rhs = try SafeFiles.regularFiles(revisionURL(b))
         let changes = Set(lhs.keys).union(rhs.keys).filter { lhs[$0] != rhs[$0] }.sorted()
-        return "Runtime: \(a.backend.title) → \(b.backend.title)\nGame version: \(a.gameVersion) → \(b.gameVersion)\nEnabled mods: \(a.enabledMods.count) → \(b.enabledMods.count)\nMod selection/order changed: \(a.enabledMods != b.enabledMods ? "Yes" : "No")\nChanged save/overlay files: \(changes.count)\n" + changes.joined(separator: "\n")
+        func describe(_ ids: [String]) -> String {
+            ids.enumerated().map { index, id in
+                let mod = state.mods.first { $0.id == id }
+                return "\(index + 1). \(mod?.name ?? "Missing package") · version \(mod?.version ?? "Unknown") · \(id.prefix(12))"
+            }.joined(separator: "\n")
+        }
+        return "Runtime: \(a.backend.title) → \(b.backend.title)\nGame version: \(a.gameVersion) → \(b.gameVersion)\nGeneration: \(a.generation) → \(b.generation)\nNotes changed: \(a.notes != b.notes ? "Yes" : "No")\n\nLeft mod order:\n\(describe(a.enabledMods))\n\nRight mod order:\n\(describe(b.enabledMods))\n\nChanged save/overlay files: \(changes.count)\n" + changes.map { path in "\(path) · \(lhs[path]?.prefix(12) ?? "absent") → \(rhs[path]?.prefix(12) ?? "absent")" }.joined(separator: "\n")
     }
 }

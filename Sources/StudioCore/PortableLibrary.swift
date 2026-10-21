@@ -22,6 +22,9 @@ extension LibraryStore {
                 if let hash = mod.originalArchiveHash {
                     guard try SafeFiles.hashFile(source.appendingPathComponent("original.zip")) == hash else { throw StudioError.invalid("Original archive checksum mismatch.") }
                 }
+                var allowed = Dictionary(uniqueKeysWithValues: mod.files.map { ("content/" + $0.key, $0.value) })
+                if let hash = mod.originalArchiveHash { allowed["original.zip"] = hash }
+                try SafeFiles.verify(source, allowed)
                 try SafeFiles.copyTree(source, payload.appendingPathComponent("packages/\(mod.id)"))
             }
             var copied = Set<UUID>()
@@ -52,8 +55,11 @@ extension LibraryStore {
         try locked {
             try reload()
             guard publication.pathExtension == "zmslibrary" else { throw StudioError.invalid("Select a complete .zmslibrary publication.") }
-            _ = try SafeFiles.regularFiles(publication)
-            let data = try Data(contentsOf: publication.appendingPathComponent("manifest.json"))
+            let publicationFiles = try SafeFiles.regularFiles(publication)
+            guard publicationFiles.keys.allSatisfy({ $0 == "COMPLETE" || $0 == "manifest.json" || $0.hasPrefix("payload/") }) else { throw StudioError.invalid("Publication contains unexpected or conflicting sync files. Keep both versions and resolve them separately.") }
+            let manifestURL = publication.appendingPathComponent("manifest.json")
+            guard (try manifestURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16_777_216 else { throw StudioError.invalid("Portable manifest exceeds its size limit.") }
+            let data = try Data(contentsOf: manifestURL)
             guard data.count <= 16_777_216, try String(contentsOf: publication.appendingPathComponent("COMPLETE"), encoding: .utf8) == SafeFiles.hash(data) else { throw StudioError.invalid("Publication is incomplete or its manifest checksum is invalid. Wait for sync/download.") }
             let manifest = try SafeFiles.decode(PortableManifest.self, data)
             guard manifest.schema == 1 else { throw StudioError.invalid("Unsupported portable schema.") }

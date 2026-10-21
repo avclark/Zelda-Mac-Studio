@@ -73,9 +73,13 @@ extension LibraryStore {
         plan.removed = old.keys.filter { plan.hashes[$0] == nil }.sorted()
         return plan
     }
-    public func deploy(_ id: UUID) throws {
+    public func deploy(_ id: UUID, expected: Adventure? = nil) throws {
         try locked {
-            try reload(); let old = try writable(id), plan = try plan(old)
+            try reload(); let old = try writable(id)
+            if let expected {
+                guard expected.revision == old.revision, expected.enabledMods == old.enabledMods, expected.backend == old.backend else { throw StudioError.invalid("Environment changed after the preview. Review a fresh deployment plan.") }
+            }
+            let plan = try plan(old)
             guard plan.canDeploy else { throw StudioError.invalid(plan.blockers.joined(separator: "\n")) }
             var env = old; env.revision = UUID(); env.generation += 1; env.gameplayVerified = false
             try stageRevision(from: old, to: env)
