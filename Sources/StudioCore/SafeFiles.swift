@@ -41,7 +41,11 @@ public enum SafeFiles {
         var traversalError: Error?
         guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [.isSymbolicLinkKey, .isRegularFileKey, .isDirectoryKey, .fileSizeKey], options: [], errorHandler: { _, error in traversalError = error; return false }) else { throw StudioError.invalid("Cannot read directory.") }
         for case let url as URL in enumerator {
-            let path = String(url.path.dropFirst(root.path.count + 1)); try safePath(path)
+            let base = root.resolvingSymlinksInPath().path + "/"
+            let resolved = url.standardizedFileURL.path
+            let canonical = resolved.hasPrefix(base) ? resolved : url.resolvingSymlinksInPath().path
+            guard canonical.hasPrefix(base) else { throw StudioError.invalid("File escaped the selected directory.") }
+            let path = String(canonical.dropFirst(base.count)); try safePath(path)
             count += 1; guard count <= maxFiles else { throw StudioError.invalid("File count limit exceeded.") }
             let normalized = path.precomposedStringWithCanonicalMapping.lowercased()
             guard seen.insert(normalized).inserted else { throw StudioError.invalid("Case or Unicode path collision.") }

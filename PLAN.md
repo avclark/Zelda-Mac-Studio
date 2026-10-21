@@ -68,3 +68,8 @@ _Codex: append dated notes with completed steps, relevant commit hashes, build a
 - No game search repeated and no game/key/save files accessed. `.gitignore` excludes private inputs and generated outputs.
 - Chose an immutable revision store with atomic catalog commits, strict bounded ZIP import using system zlib, and a runtime-independent laboratory deployer. See DECISIONS.md.
 - Foundation evidence: `swift test --scratch-path .build --cache-path .build/cache` built the core and SwiftUI executable; 2 tests passed (schema round-trip and unsafe paths). Initial sandbox attempt could not write the compiler cache; approved build access resolved it. No security controls disabled.
+
+## 2026-10-21 — isolated environments and snapshots
+- Foundation committed as `b0e4aeb`.
+- Implemented persistent create/rename/archive/recoverable Trash, independent clone/save copies, immutable snapshot checksums, transactional restore, pre-restore recovery snapshot and active-runtime mutation guards.
+- `swift test --scratch-path .build --cache-path .build/cache`: **7 tests passed**, including clone/save isolation, persistence/reopen, fresh-save clone, recoverable deletion, corrupt snapshot rejection, running-environment guards, schema rejection and injected restore-commit failure. Fixed a real `/var` vs `/private/var` canonical-path bug exposed by the first integration run.
