@@ -1,0 +1,26 @@
+// !$*UTF8*$!
+{ archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+1A0CCD86BB6381DCB565E8E6 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/StudioApp/App.swift"; sourceTree = SOURCE_ROOT; };
+C3E0EEF853DEF9F3EB17A92C = { isa = PBXBuildFile; fileRef = 1A0CCD86BB6381DCB565E8E6; };
+09ECBBB9BA2E47316C817303 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/StudioApp/AppModel.swift"; sourceTree = SOURCE_ROOT; };
+6DCD2CA582FA5891CAE9FA7A = { isa = PBXBuildFile; fileRef = 09ECBBB9BA2E47316C817303; };
+C2D4B446A44CE54FAB8E0115 = { isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/AppIcon.icns; sourceTree = SOURCE_ROOT; };
+4EED28C5B2A81EE7A7A803CA = { isa = PBXBuildFile; fileRef = C2D4B446A44CE54FAB8E0115; };
+A8792157CB4F27FB949C035F = { isa = PBXFileReference; explicitFileType = wrapper.application; path = ZeldaMacStudio.app; sourceTree = BUILT_PRODUCTS_DIR; };
+0A3E27B8CA818264D75C8D81 = { isa = PBXGroup; children = (A8792157CB4F27FB949C035F,); name = Products; sourceTree = "<group>"; };
+0D6E4079E36703EBD37C0072 = { isa = PBXGroup; children = (1A0CCD86BB6381DCB565E8E6,09ECBBB9BA2E47316C817303, C2D4B446A44CE54FAB8E0115, 0A3E27B8CA818264D75C8D81,); sourceTree = "<group>"; };
+BC4A71180870F7945155FBB0 = { isa = XCLocalSwiftPackageReference; relativePath = "."; };
+0D45F5FD462B8C70BFFB1002 = { isa = XCSwiftPackageProductDependency; package = BC4A71180870F7945155FBB0; productName = StudioCore; };
+91596F6079D535D734C1642A = { isa = PBXBuildFile; productRef = 0D45F5FD462B8C70BFFB1002; };
+878A52FC5FF6A57D50B7B870 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (C3E0EEF853DEF9F3EB17A92C,6DCD2CA582FA5891CAE9FA7A,); runOnlyForDeploymentPostprocessing = 0; };
+E2AA269EB967A8853A258BFA = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (91596F6079D535D734C1642A,); runOnlyForDeploymentPostprocessing = 0; };
+41D311A605520FC7B8B9A980 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (4EED28C5B2A81EE7A7A803CA,); runOnlyForDeploymentPostprocessing = 0; };
+73EBF6644258C120893E685D = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; }; name = Debug; };
+0B0C687DF8B6B8DC790B519C = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
+76F8DEC3DFE0BDB465198890 = { isa = XCConfigurationList; buildConfigurations = (73EBF6644258C120893E685D, 0B0C687DF8B6B8DC790B519C,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+6C7EFF6369083C8E1F2B1994 = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; PRODUCT_NAME = ZeldaMacStudio; PRODUCT_BUNDLE_IDENTIFIER = local.zeldamacstudio.manager; INFOPLIST_FILE = Resources/Info.plist; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; COMBINE_HIDPI_IMAGES = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; }; name = Debug; };
+DD75E2CB1C510A828AC72D96 = { isa = XCBuildConfiguration; buildSettings = { MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; CLANG_ENABLE_MODULES = YES; PRODUCT_NAME = ZeldaMacStudio; PRODUCT_BUNDLE_IDENTIFIER = local.zeldamacstudio.manager; INFOPLIST_FILE = Resources/Info.plist; CODE_SIGN_STYLE = Manual; CODE_SIGN_IDENTITY = "-"; ENABLE_APP_SANDBOX = NO; COMBINE_HIDPI_IMAGES = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
+1B672BF3DA427763BF644BE3 = { isa = XCConfigurationList; buildConfigurations = (6C7EFF6369083C8E1F2B1994, DD75E2CB1C510A828AC72D96,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+34A04005BCAF206EEC990BD9 = { isa = PBXNativeTarget; buildConfigurationList = 1B672BF3DA427763BF644BE3; buildPhases = (878A52FC5FF6A57D50B7B870, E2AA269EB967A8853A258BFA, 41D311A605520FC7B8B9A980,); buildRules = (); dependencies = (); name = ZeldaMacStudio; packageProductDependencies = (0D45F5FD462B8C70BFFB1002,); productName = ZeldaMacStudio; productReference = A8792157CB4F27FB949C035F; productType = "com.apple.product-type.application"; };
+244210E48437B6556980A702 = { isa = PBXProject; attributes = { LastUpgradeCheck = 1620; }; buildConfigurationList = 76F8DEC3DFE0BDB465198890; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = 0D6E4079E36703EBD37C0072; packageReferences = (BC4A71180870F7945155FBB0,); productRefGroup = 0A3E27B8CA818264D75C8D81; projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9,); };
+}; rootObject = 244210E48437B6556980A702; }
