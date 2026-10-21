@@ -73,3 +73,8 @@ _Codex: append dated notes with completed steps, relevant commit hashes, build a
 - Foundation committed as `b0e4aeb`.
 - Implemented persistent create/rename/archive/recoverable Trash, independent clone/save copies, immutable snapshot checksums, transactional restore, pre-restore recovery snapshot and active-runtime mutation guards.
 - `swift test --scratch-path .build --cache-path .build/cache`: **7 tests passed**, including clone/save isolation, persistence/reopen, fresh-save clone, recoverable deletion, corrupt snapshot rejection, running-environment guards, schema rejection and injected restore-commit failure. Fixed a real `/var` vs `/private/var` canonical-path bug exposed by the first integration run.
+
+## 2026-10-21 — secure mod workflows
+- Implemented folder and stored/deflate ZIP import, immutable original ZIP retention, content identity, duplicate detection, RomFS/ExeFS/cheats/patches classification, independent selection/order, path conflict blocking, deterministic overlay diff, verified staged deployment and automatic recovery snapshots.
+- Limits: 256 MiB compressed archive, 128 MiB per ZIP entry, 1 GiB expanded tree, 20,000 entries. Reject traversal, absolute/backslash paths, links, private input extensions, duplicate/case-colliding paths, bad CRC, truncated/unsupported archives, and expansion over quota. No downloaded content is executed.
+- Evidence: all **18 tests passed**, including 5 ModTests covering import/dedup, stored/deflate ZIP, malicious paths, links, quotas, CRC, truncated data, unknown/ExeFS blocking, conflicting paths, deploy/disable/revert, clone isolation and injected deployment failure. SwiftUI executable also compiled.

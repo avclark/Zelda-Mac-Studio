@@ -65,6 +65,20 @@ public enum SafeFiles {
     public static func copyTree(_ source: URL, _ destination: URL) throws {
         let manifest = try regularFiles(source)
         try directory(destination)
+        // Empty save/overlay/revision directories are part of the workspace structure.
+        if let entries = fm.enumerator(at: source, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey]) {
+            let base = source.resolvingSymlinksInPath().path + "/"
+            for case let entry as URL in entries {
+                let values = try entry.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard values.isSymbolicLink != true else { throw StudioError.invalid("Source changed to a symbolic link during copy.") }
+                if values.isDirectory == true {
+                    let resolved = entry.resolvingSymlinksInPath().path
+                    guard resolved.hasPrefix(base) else { throw StudioError.invalid("Directory escaped copy source.") }
+                    let relative = String(resolved.dropFirst(base.count)); try safePath(relative)
+                    try directory(destination.appendingPathComponent(relative))
+                }
+            }
+        }
         for path in manifest.keys.sorted() {
             let target = destination.appendingPathComponent(path); try directory(target.deletingLastPathComponent())
             try fm.copyItem(at: source.appendingPathComponent(path), to: target)
